@@ -45,4 +45,36 @@ class Handler extends ExceptionHandler
             //
         });
     }
+
+    /**
+     * Customize the unauthorized response.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     *
+     * @return \Illuminate\Http\Response
+     */
+    protected function unauthenticated($request, \Illuminate\Auth\AuthenticationException $exception)
+    {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Unauthenticated.',
+        ], 401);
+    }
+
+    /**
+     * Customize the validation error response.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Illuminate\Contracts\Validation\Validator  $validator
+     *
+     * @return \Illuminate\Http\Response
+     */
+    protected function invalidJson($request, \Illuminate\Validation\ValidationException $exception)
+    {
+        return response()->json([
+            'status' => 'error',
+            'message' => $exception->getMessage(),
+            'errors' => $exception->errors(),
+        ], $exception->status);
+    }
 }

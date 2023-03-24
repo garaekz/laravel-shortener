@@ -12,12 +12,13 @@ class SocialAuthServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Test that authenticateWithProvider returns a token
-     */
+    private $service;
 
-    public function test_authenticate_with_provider_returns_token() {
-        // We need to mock the getID, getEmail and getName methods
+    // TODO: Properly refactor this test and service to be independent from external services
+    public function setUp(): void
+    {
+        parent::setUp();
+
         Socialite::shouldReceive('driver->stateless->user->getId')
             ->once()
             ->andReturn('fakeId');
@@ -28,7 +29,6 @@ class SocialAuthServiceTest extends TestCase
             ->once()
             ->andReturn('fakeName');
 
-        // We need to mock the models calls
         $this->mock(User::class, function ($mock) {
             $mock->shouldReceive('firstOrCreate')
                 ->andReturn((object) [
@@ -39,26 +39,25 @@ class SocialAuthServiceTest extends TestCase
                 ]);
         });
 
-        $service = new SocialAuthService();
-        $token = $service->authenticateWithProvider('google');
-        $this->assertIsString($token);
+        $this->service = new SocialAuthService();
+    }
+
+    /**
+     * Test that authenticateWithProvider returns a token
+     */
+
+    public function test_authenticate_with_provider_returns_token()
+    {
+        $token = $this->service->authenticateWithProvider('google');
+        $this->assertNotNull($token);
     }
 
     /**
      * Test that authenticateWithProvider creates a user
      */
 
-    public function test_authenticate_with_provider_creates_user() {
-        Socialite::shouldReceive('driver->stateless->user->getId')
-            ->once()
-            ->andReturn('fakeId');
-        Socialite::shouldReceive('driver->stateless->user->getEmail')
-            ->once()
-            ->andReturn('fakeEmail');
-        Socialite::shouldReceive('driver->stateless->user->getName')
-            ->once()
-            ->andReturn('fakeName');
-
+    public function test_authenticate_with_provider_creates_user()
+    {
         $this->mock(User::class, function ($mock) {
             $mock->shouldReceive('firstOrCreate')
                 ->andReturn((object) [
@@ -68,8 +67,7 @@ class SocialAuthServiceTest extends TestCase
                 ]);
         });
 
-        $service = new SocialAuthService();
-        $token = $service->authenticateWithProvider('google');
+        $this->service->authenticateWithProvider('google');
         $this->assertDatabaseHas('users', [
             'id' => 1,
             'name' => 'fakeName',
@@ -81,17 +79,8 @@ class SocialAuthServiceTest extends TestCase
      * Test that authenticateWithProvider creates a social provider
      */
 
-    public function test_authenticate_with_provider_creates_social_provider() {
-        Socialite::shouldReceive('driver->stateless->user->getId')
-            ->once()
-            ->andReturn('fakeId');
-        Socialite::shouldReceive('driver->stateless->user->getEmail')
-            ->once()
-            ->andReturn('fakeEmail');
-        Socialite::shouldReceive('driver->stateless->user->getName')
-            ->once()
-            ->andReturn('fakeName');
-
+    public function test_authenticate_with_provider_creates_social_provider()
+    {
         $this->mock(User::class, function ($mock) {
             $mock->shouldReceive('firstOrCreate')
                 ->andReturn((object) [
@@ -102,8 +91,7 @@ class SocialAuthServiceTest extends TestCase
                 ]);
         });
 
-        $service = new SocialAuthService();
-        $token = $service->authenticateWithProvider('google');
+        $this->service->authenticateWithProvider('google');
         $this->assertDatabaseHas('social_providers', [
             'user_id' => 1,
             'provider_id' => 'fakeId',

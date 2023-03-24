@@ -2,11 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\SocialProvider;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Laravel\Socialite\AbstractUser as SocialUser;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthService {
@@ -25,6 +23,6 @@ class SocialAuthService {
             ['provider' => $provider]
         );
 
-        return $user->createToken('authToken')->plainTextToken;
+        return $user->createToken('authToken', ['member'])->plainTextToken;
     }
 }

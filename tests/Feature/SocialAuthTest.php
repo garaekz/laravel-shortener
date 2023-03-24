@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\SocialAuthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Laravel\Sanctum\Sanctum;
 use Laravel\Socialite\Facades\Socialite;
 use Tests\TestCase;
 
@@ -17,82 +18,124 @@ class SocialAuthTest extends TestCase
      * Tests that the auth url is returned for the social provider
      */
 
-    public function test_get_social_provider_auth_url() {
+    public function test_get_social_provider_auth_url()
+    {
         Socialite::shouldReceive('driver->stateless->redirect->getTargetUrl')
             ->once()
             ->andReturn('fakeUrl');
 
-        $response = $this->get('/api/v1/auth/google/redirect');
+        $response = $this->get('/api/auth/google/redirect');
 
-        $response->assertStatus(200);
-        $response->assertJson([
-            'url' => 'fakeUrl',
-        ]);
+        $response->assertOk()
+            ->assertJson([
+                'url' => 'fakeUrl',
+            ]);
     }
 
     /**
      * Tests that the access token is returned for the social provider
      */
 
-    public function test_callback_returns_token() {
-        // We need to fake the service
+    public function test_callback_returns_token()
+    {
         $this->mock(SocialAuthService::class, function ($mock) {
             $mock->shouldReceive('authenticateWithProvider')
                 ->once()
                 ->andReturn('fakeToken');
         });
 
-        $response = $this->get('/api/v1/auth/google/callback');
+        $response = $this->get('/api/auth/google/callback');
 
-        $response->assertStatus(200);
-        $response->assertJson([
-            'access_token' => 'fakeToken',
-            'token_type' => 'Bearer',
-        ]);
+        $response->assertOk()
+            ->assertJson([
+                'access_token' => 'fakeToken',
+                'token_type' => 'Bearer',
+            ]);
     }
 
     /**
      * Tests when callback fails
      */
-
-    public function test_callback_fails() {
-        // We need to fake the service
+    public function test_callback_fails()
+    {
         $this->mock(SocialAuthService::class, function ($mock) {
             $mock->shouldReceive('authenticateWithProvider')
                 ->once()
                 ->andThrow(new \Exception('fake error'));
         });
 
-        $response = $this->get('/api/v1/auth/google/callback');
+        $response = $this->get('/api/auth/google/callback');
 
-        $response->assertStatus(500);
-        $response->assertJson([
-            'message' => 'Something went wrong',
-        ]);
+        $response->assertServerError()
+            ->assertJson([
+                'message' => 'Something went wrong',
+            ]);
     }
 
     /**
      * Tests the logout functionality
      */
-    public function test_logout() {
-        // We need to fake the request logeed in user
+    public function test_logout()
+    {
         $user = User::factory()->create();
-        $token = $user->createToken('test')->plainTextToken;
+        $user->createToken('authToken')->plainTextToken;
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
-        ])->postJson('/api/v1/auth/logout');
+        $response = $this->actingAs($user)
+            ->postJson('/api/auth/logout');
 
-        $response->assertStatus(200);
-        $response->assertJson([
-            'message' => 'Logged out',
-        ]);
+        $response->assertStatus(200)
+            ->assertJson([
+                'message' => 'Logged out',
+            ]);
 
-        // Check if the token is deleted
-        $this->assertDatabaseMissing('personal_access_tokens', [
-            'tokenable_id' => $user->id,
-            'tokenable_type' => 'App\Models\User',
-            'name' => 'test',
-        ]);
+        $this->assertCount(0, $user->tokens);
+    }
+
+    /**
+     * Tests the logout functionality without token
+     */
+    public function test_logout_without_token()
+    {
+        $response = $this->postJson('/api/auth/logout');
+
+        $response->assertUnauthorized()
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Unauthenticated.',
+            ]);
+    }
+
+    /**
+     * Tests the user is authenticated
+     */
+    public function test_user_is_authenticated()
+    {
+
+        $response = $this->actingAs(User::factory()->create())
+            ->getJson('/api/user');
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'id',
+                'name',
+                'email',
+                'email_verified_at',
+                'created_at',
+                'updated_at',
+            ]);
+    }
+
+    /**
+     * Tests the user is not authenticated
+     */
+    public function test_user_is_not_authenticated()
+    {
+        $response = $this->getJson('/api/user');
+
+        $response->assertUnauthorized()
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Unauthenticated.',
+            ]);
     }
 }

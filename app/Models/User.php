@@ -51,4 +51,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(SocialProvider::class);
     }
+
+    /**
+     * Get the urls for the User
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function urls()
+    {
+        return $this->hasMany(Url::class);
+    }
 }
