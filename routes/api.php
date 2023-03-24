@@ -21,7 +21,7 @@ Route::group(['prefix' => 'v1'], function () {
         return $request->user();
     });
     Route::group(['prefix' => 'auth'], function () {
-        Route::post('{provider}/redirect', [SocialAuthController::class, 'redirect']);
+        Route::get('{provider}/redirect', [SocialAuthController::class, 'redirect']);
         Route::get('{provider}/callback', [SocialAuthController::class, 'callback']);
         Route::post('logout', [SocialAuthController::class, 'logout'])->middleware('auth:sanctum');
     });
