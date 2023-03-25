@@ -107,6 +107,7 @@ class UrlControllerTest extends TestCase
      */
     public function test_all_url_routes_fail_when_user_is_not_authenticated()
     {
+        // This should work for all routes in the same url group
         $response = $this->postJson('/api/v1/urls', [
             'url' => 'https://www.google.com',
         ]);
@@ -116,6 +117,36 @@ class UrlControllerTest extends TestCase
             'status',
             'message',
         ]);
+    }
+
+    /**
+     * Test get single url
+     */
+    public function test_show_url_by_code()
+    {
+        $user = User::factory()->create();
+        $user->urls()->save(Url::factory()->make(
+            [
+                'code' => 'fake',
+                'original_url' => 'https://www.google.com',
+            ]
+        ));
+
+        Sanctum::actingAs(
+            $user,
+            ['api:read']
+        );
+
+        $response = $this->getJson('/api/v1/urls/fake');
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'data' => [
+                    'code' => 'fake',
+                    'original_url' => 'https://www.google.com',
+                ],
+            ]);
     }
 
     /**

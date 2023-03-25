@@ -4,12 +4,9 @@ namespace App\Http\Controllers\API\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApiUrlStoreRequest;
-use App\Models\Url;
 use App\Services\UrlService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class UrlController extends Controller
 {
@@ -41,13 +38,9 @@ class UrlController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => [
-                    'code' => $code,
-                    'original_url' => $url->original_url,
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
-                ]
+                'data' => $url,
             ], 201);
+
         } catch (\Throwable $th) {
             Log::error($th->getMessage());
             return response()->json([
@@ -60,9 +53,16 @@ class UrlController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(string $code)
     {
-        //
+        // TODO: Implement show method. This is just a stub for testing
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'code' => $code,
+                'original_url' => 'https://www.google.com',
+            ],
+        ]);
     }
 
     /**

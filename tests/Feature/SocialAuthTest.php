@@ -5,8 +5,6 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\SocialAuthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Laravel\Sanctum\Sanctum;
 use Laravel\Socialite\Facades\Socialite;
 use Tests\TestCase;
 

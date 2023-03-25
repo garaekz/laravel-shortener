@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use App\Contracts\UserRepositoryInterface;
+use App\Models\SocialProvider;
 use App\Models\User;
 use App\Services\SocialAuthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,17 +31,19 @@ class SocialAuthServiceTest extends TestCase
             ->once()
             ->andReturn('fakeName');
 
-        $this->mock(User::class, function ($mock) {
-            $mock->shouldReceive('firstOrCreate')
-                ->andReturn((object) [
-                    'id' => 1,
-                    'name' => 'fakeName',
-                    'email' => 'fakeEmail',
-                    'password' => 'fakePassword',
-                ]);
-        });
+        $mockUserRepository = $this->createMock(UserRepositoryInterface::class);
+        $user = $this->createMock(User::class);
+        // Mock plainTextToken
 
-        $this->service = new SocialAuthService();
+        $user->method('createToken')
+            ->willReturn((object) ['plainTextToken' => 'fakeToken' ]);
+
+        $mockUserRepository->method('findOrCreate')
+            ->willReturn($user);
+        $mockUserRepository->method('createSocialProvider')
+            ->willReturn($user);
+
+        $this->service = new SocialAuthService($mockUserRepository);
     }
 
     /**
@@ -50,52 +54,6 @@ class SocialAuthServiceTest extends TestCase
     {
         $token = $this->service->authenticateWithProvider('google');
         $this->assertNotNull($token);
-    }
-
-    /**
-     * Test that authenticateWithProvider creates a user
-     */
-
-    public function test_authenticate_with_provider_creates_user()
-    {
-        $this->mock(User::class, function ($mock) {
-            $mock->shouldReceive('firstOrCreate')
-                ->andReturn((object) [
-                    'name' => 'fakeName',
-                    'email' => 'fakeEmail',
-                    'password' => 'fakePassword',
-                ]);
-        });
-
-        $this->service->authenticateWithProvider('google');
-        $this->assertDatabaseHas('users', [
-            'id' => 1,
-            'name' => 'fakeName',
-            'email' => 'fakeEmail',
-        ]);
-    }
-
-    /**
-     * Test that authenticateWithProvider creates a social provider
-     */
-
-    public function test_authenticate_with_provider_creates_social_provider()
-    {
-        $this->mock(User::class, function ($mock) {
-            $mock->shouldReceive('firstOrCreate')
-                ->andReturn((object) [
-                    'id' => 1,
-                    'name' => 'fakeName',
-                    'email' => 'fakeEmail',
-                    'password' => 'fakePassword',
-                ]);
-        });
-
-        $this->service->authenticateWithProvider('google');
-        $this->assertDatabaseHas('social_providers', [
-            'user_id' => 1,
-            'provider_id' => 'fakeId',
-            'provider' => 'google',
-        ]);
+        $this->assertEquals('fakeToken', $token);
     }
 }

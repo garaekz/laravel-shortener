@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\UrlRepositoryInterface;
 use App\Models\CodeGeneratorConfiguration;
 use App\Models\Url;
 use Exception;
@@ -9,6 +10,13 @@ use Illuminate\Support\Facades\Cache;
 
 class UrlService
 {
+    private $urlRepository;
+
+    public function __construct(UrlRepositoryInterface $urlRepository)
+    {
+        $this->urlRepository = $urlRepository;
+    }
+
     public function generateUrlCode($tries = 0): string
     {
         $config = Cache::rememberForever('code_generator_configuration', function () {
@@ -55,7 +63,7 @@ class UrlService
 
     public function create(string $originalUrl, string $code): Url
     {
-        return Url::create([
+        return $this->urlRepository->create([
             'original_url' => $originalUrl,
             'code' => $code,
             'user_id' => auth()->id(),
