@@ -69,4 +69,16 @@ class UrlService
             'user_id' => auth()->id(),
         ]);
     }
+
+    public function findByCode(string $code): Url
+    {
+        $url = $this->urlRepository->findFirstBy('code', $code);
+        $this->incrementUrlClicks($url);
+        return $url;
+    }
+
+    public function incrementUrlClicks(Url $url): void
+    {
+        $url->increment('clicks');
+    }
 }

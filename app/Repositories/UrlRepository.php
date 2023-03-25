@@ -17,4 +17,8 @@ class UrlRepository implements UrlRepositoryInterface
     {
         return $this->model->create($data);
     }
+
+    public function findFirstBy(string $column, $value): Url {
+        return $this->model->where($column, $value)->firstOrFail();
+    }
 }

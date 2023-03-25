@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApiUrlStoreRequest;
 use App\Services\UrlService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -45,7 +46,7 @@ class UrlController extends Controller
             Log::error($th->getMessage());
             return response()->json([
                 'status' => 'error',
-                'message' => $th->getMessage(),
+                'message' => 'Something went wrong.',
             ], 500);
         }
     }
@@ -55,14 +56,25 @@ class UrlController extends Controller
      */
     public function show(string $code)
     {
-        // TODO: Implement show method. This is just a stub for testing
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'code' => $code,
-                'original_url' => 'https://www.google.com',
-            ],
-        ]);
+        try {
+            $url = $this->service->findByCode($code);
+            return response()->json([
+                'status' => 'success',
+                'data' => $url,
+            ]);
+        } catch (\Throwable $th) {
+            if ($th instanceof ModelNotFoundException) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Url not found.',
+                ], 404);
+            }
+            Log::error($th->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong.',
+            ], 500);
+        }
     }
 
     /**

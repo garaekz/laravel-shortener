@@ -35,6 +35,13 @@ class UrlControllerTest extends TestCase
                         'original_url' => 'https://www.google.com',
                     ]
                 ));
+            $mock->shouldReceive('findByCode')
+                ->andReturn(Url::factory()->make(
+                    [
+                        'code' => 'fakeCode',
+                        'original_url' => 'https://www.google.com',
+                    ]
+                ));
         });
 
         $response = $this->postJson('/api/v1/urls', [
@@ -66,7 +73,7 @@ class UrlControllerTest extends TestCase
             'url' => 'invalid url',
         ]);
 
-        $response->assertStatus(422)
+        $response->assertJsonValidationErrorFor('url')
             ->assertJson([
                 'status' => 'error',
                 'message' => 'The url field must be a valid URL.',
@@ -90,7 +97,7 @@ class UrlControllerTest extends TestCase
 
         $response = $this->postJson('/api/v1/urls');
 
-        $response->assertStatus(422)
+        $response->assertJsonValidationErrorFor('url')
             ->assertJson([
                 'status' => 'error',
                 'message' => 'The url field is required.',
@@ -122,7 +129,7 @@ class UrlControllerTest extends TestCase
     /**
      * Test get single url
      */
-    public function test_show_url_by_code()
+    public function test_show_returns_code()
     {
         $user = User::factory()->create();
         $user->urls()->save(Url::factory()->make(
@@ -140,14 +147,80 @@ class UrlControllerTest extends TestCase
         $response = $this->getJson('/api/v1/urls/fake');
 
         $response->assertOk()
-            ->assertJson([
+            ->assertJsonStructure([
+                'status',
+                'data' => [
+                    'code',
+                    'original_url',
+                    'created_at',
+                    'updated_at',
+                ],
+            ])
+            ->assertExactJson([
                 'status' => 'success',
                 'data' => [
                     'code' => 'fake',
                     'original_url' => 'https://www.google.com',
+                    'created_at' => $user->urls->first()->created_at->toDateTimeString(),
+                    'updated_at' => $user->urls->first()->updated_at->toDateTimeString(),
+                    'clicks' => 1,
+                    'last_clicked_at' => $user->urls->first()->last_clicked_at,
                 ],
             ]);
     }
+
+    /**
+     * Test get single url fails when code is not found
+     */
+    public function test_show_fails_when_code_is_not_found()
+    {
+        $user = User::factory()->create();
+        $user->urls()->save(Url::factory()->make(
+            [
+                'code' => 'fake',
+                'original_url' => 'https://www.google.com',
+            ]
+        ));
+
+        Sanctum::actingAs(
+            $user,
+            ['api:read']
+        );
+
+        $response = $this->getJson('/api/v1/urls/notfound');
+
+        $response->assertNotFound()
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Url not found.',
+            ]);
+    }
+
+    /**
+     * Test show handles unexpected errors
+     */
+    public function test_show_handles_unexpected_errors() {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs(
+            $user,
+            ['api:read']
+        );
+
+        $this->mock(UrlService::class, function ($mock) {
+            $mock->shouldReceive('findByCode')
+                ->andThrow(new Exception('Something went wrongs.'));
+        });
+
+        $response = $this->getJson('/api/v1/urls/fake');
+
+        $response->assertServerError()
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Something went wrong.',
+            ]);
+    }
+
 
     /**
      * Test that url creation fails when generate code service throws
